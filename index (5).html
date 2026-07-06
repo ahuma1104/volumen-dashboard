@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volumen & Flujos — Volume & Flow Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@1,600;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b14;
+    --panel: #0c1220;
+    --panel-2: #101828;
+    --border: #1b2436;
+    --border-soft: #141c2e;
+    --text: #d7e0ef;
+    --text-dim: #7d8aa5;
+    --text-faint: #4a5670;
+    --green: #2ee6a8;
+    --green-dim: rgba(46,230,168,.12);
+    --red: #ff5d73;
+    --red-dim: rgba(255,93,115,.12);
+    --yellow: #ffc94d;
+    --yellow-dim: rgba(255,201,77,.12);
+    --blue: #5aa7ff;
+    --purple: #b78aff;
+    --orange: #ff9e5a;
+    --pink: #ff7ab8;
+    --cyan: #4dd8e6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', 'Consolas', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    padding: 28px 24px 60px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* ── Header ─────────────────────────────────────────── */
+  .eyebrow {
+    font-size: 10px; letter-spacing: .35em; color: var(--text-faint);
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .titlebar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic; font-weight: 700; font-size: 34px; color: #eef3fb;
+    letter-spacing: .01em;
+  }
+  h1 .accent { color: var(--green); }
+  .subtitle { color: var(--text-dim); font-size: 11.5px; margin-top: 6px; }
+  .subtitle .warn { color: var(--text-faint); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    font-family: inherit; font-size: 11px; letter-spacing: .12em;
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 9px 14px; cursor: pointer; text-transform: uppercase;
+    transition: border-color .15s, background .15s;
+  }
+  button:hover { border-color: var(--green); }
+  button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  button.primary { background: var(--green); color: #05231a; border-color: var(--green); font-weight: 600; }
+  button.primary:hover { background: #4defbb; }
+  button:disabled { opacity: .5; cursor: wait; }
+
+  /* ── Tabs ───────────────────────────────────────────── */
+  .tabs { display: inline-flex; gap: 4px; margin: 26px 0 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px; }
+  .tab {
+    border: none; background: transparent; color: var(--text-dim);
+    padding: 8px 18px; border-radius: 6px; font-size: 11.5px;
+  }
+  .tab.active { background: var(--green); color: #05231a; font-weight: 600; }
+  .tab:hover:not(.active) { color: var(--text); border-color: transparent; }
+
+  /* ── Summary strip ──────────────────────────────────── */
+  .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  @media (max-width: 820px) { .summary { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .card h3 {
+    font-size: 10px; letter-spacing: .25em; color: var(--text-faint);
+    text-transform: uppercase; font-weight: 500; margin-bottom: 10px;
+  }
+  .top-rvol { display: flex; flex-direction: column; gap: 7px; }
+  .top-rvol-row { display: flex; align-items: baseline; gap: 10px; font-size: 12.5px; }
+  .top-rvol-row .rank { color: var(--text-faint); font-size: 10px; width: 14px; }
+  .top-rvol-row .tk { font-weight: 600; width: 68px; }
+  .top-rvol-row .rv { color: var(--green); font-weight: 600; width: 84px; }
+  .alert-list { display: flex; flex-direction: column; gap: 7px; font-size: 12px; }
+  .alert-row .tk { font-weight: 600; }
+  .muted { color: var(--text-faint); font-size: 11.5px; }
+  .pos { color: var(--green); } .neg { color: var(--red); } .flat { color: var(--text-dim); }
+
+  /* ── Flujos panel ───────────────────────────────────── */
+  .flows { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .flows-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+  .flows-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-top: 10px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 9.5px; letter-spacing: .18em; color: var(--text-faint); text-transform: uppercase; }
+  .field input {
+    font-family: inherit; font-size: 12.5px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+    padding: 8px 10px; width: 130px;
+  }
+  .field input:focus { outline: none; border-color: var(--green); }
+  .flows-viz { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  @media (max-width: 820px) { .flows-viz { grid-template-columns: 1fr; } }
+  .flow-chart { background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 8px; padding: 10px 12px; }
+  .flow-chart .fc-head { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; }
+  .flow-bars { display: flex; align-items: center; gap: 3px; height: 56px; }
+  .flow-bar-col { flex: 1; display: flex; flex-direction: column; justify-content: center; height: 100%; position: relative; }
+  .fb { width: 100%; border-radius: 2px; min-height: 2px; }
+  .fb.up { background: var(--green); align-self: flex-end; }
+  .fb.dn { background: var(--red); align-self: flex-start; }
+  .fb-half { height: 50%; display: flex; }
+  .fb-half.top { align-items: flex-end; }
+  .fb-half.bot { align-items: flex-start; }
+  .flow-empty { color: var(--text-faint); font-size: 11px; padding: 18px 0; text-align: center; }
+
+  /* ── Table ──────────────────────────────────────────── */
+  .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 860px; }
+  thead th {
+    font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--text-faint); font-weight: 500; text-align: right;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    cursor: pointer; user-select: none; white-space: nowrap;
+    position: sticky; top: 0; background: var(--panel); z-index: 2;
+  }
+  thead th:hover { color: var(--green); }
+  thead th.sorted { color: var(--green); }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border-soft); text-align: right; white-space: nowrap; font-size: 12.5px; }
+  tbody td:first-child { text-align: left; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(46,230,168,.03); }
+  tr.group-row td {
+    font-size: 9.5px; letter-spacing: .25em; text-transform: uppercase;
+    color: var(--text-dim); background: var(--panel-2); padding: 7px 14px;
+    text-align: left; font-weight: 500;
+  }
+  tr.bench-row td { background: rgba(90,167,255,.05); }
+  .tk-cell { display: flex; align-items: center; gap: 8px; }
+  .tk-name { font-weight: 600; }
+  .badge {
+    font-size: 8.5px; letter-spacing: .12em; padding: 2px 6px; border-radius: 4px;
+    border: 1px solid; opacity: .9;
+  }
+  .b247 { color: var(--orange); border-color: var(--orange); background: rgba(255,158,90,.1); }
+  .bBench { color: var(--blue); border-color: var(--blue); background: rgba(90,167,255,.1); }
+  .rvol-cell { display: inline-flex; align-items: center; gap: 7px; justify-content: flex-end; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.g { background: var(--green); box-shadow: 0 0 6px rgba(46,230,168,.6); }
+  .dot.y { background: var(--yellow); }
+  .dot.n { background: var(--text-faint); }
+  .volbar-wrap { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .volbar { width: 64px; height: 5px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
+  .volbar i { display: block; height: 100%; background: linear-gradient(90deg, #1d6f56, var(--green)); border-radius: 3px; }
+  .senal {
+    font-size: 9px; letter-spacing: .1em; padding: 3px 8px; border-radius: 4px; font-weight: 600;
+  }
+  .s-acum { color: var(--green); background: var(--green-dim); }
+  .s-dist { color: var(--red); background: var(--red-dim); }
+  .s-debil { color: var(--yellow); background: var(--yellow-dim); }
+  .s-neutro { color: var(--text-faint); background: transparent; }
+
+  /* ── Footer / states ────────────────────────────────── */
+  .status { text-align: center; color: var(--text-faint); font-size: 11px; margin: 16px 0 0; }
+  .disclaimer { text-align: center; color: var(--text-faint); font-size: 10.5px; margin-top: 26px; letter-spacing: .05em; }
+  .loading, .error-box {
+    text-align: center; padding: 60px 20px; color: var(--text-dim); font-size: 13px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .error-box { color: var(--red); }
+  .error-box .hint { color: var(--text-dim); font-size: 11.5px; margin-top: 10px; line-height: 1.7; }
+
+  /* ── Modal ──────────────────────────────────────────── */
+  .modal-back {
+    position: fixed; inset: 0; background: rgba(3,6,12,.8); display: none;
+    align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .modal-back.open { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    width: 640px; max-width: 100%; padding: 20px;
+  }
+  .modal h2 { font-size: 14px; margin-bottom: 6px; }
+  .modal p { color: var(--text-dim); font-size: 11.5px; line-height: 1.7; margin-bottom: 12px; }
+  .modal textarea {
+    width: 100%; height: 180px; background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; font-family: inherit;
+    font-size: 11px; padding: 10px; resize: vertical;
+  }
+  .modal textarea:focus { outline: none; border-color: var(--green); }
+  .modal .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+
+  /* ── Cuadrantes RRG ─────────────────────────────────── */
+  .quad-chip {
+    font-size: 8.5px; letter-spacing: .1em; padding: 3px 8px; border-radius: 4px;
+    font-weight: 600; border: 1px solid;
+  }
+  .q-lid { color: var(--green);  border-color: var(--green);  background: var(--green-dim); }
+  .q-mej { color: var(--blue);   border-color: var(--blue);   background: rgba(90,167,255,.12); }
+  .q-deb { color: var(--yellow); border-color: var(--yellow); background: var(--yellow-dim); }
+  .q-rez { color: var(--red);    border-color: var(--red);    background: var(--red-dim); }
+  .group-toggle {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-faint);
+    flex-wrap: wrap;
+  }
+  .gt-btn { padding: 6px 12px; font-size: 10px; }
+  .gt-btn.active { background: var(--green); color: #05231a; border-color: var(--green); font-weight: 600; }
+  .gt-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── Sección explicativa ────────────────────────────── */
+  details.howto {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; margin-top: 18px;
+  }
+  details.howto summary {
+    cursor: pointer; padding: 13px 16px; font-size: 10px;
+    letter-spacing: .25em; text-transform: uppercase; color: var(--text-dim);
+    list-style: none; user-select: none;
+  }
+  details.howto summary::-webkit-details-marker { display: none; }
+  details.howto summary::after { content: ' ▾'; color: var(--text-faint); }
+  details.howto[open] summary::after { content: ' ▴'; }
+  details.howto summary:hover { color: var(--green); }
+  .howto-body { padding: 4px 18px 18px; }
+  .howto-body h4 {
+    font-size: 11px; color: var(--green); margin: 16px 0 6px;
+    letter-spacing: .08em; font-weight: 600;
+  }
+  .howto-body h4:first-child { margin-top: 6px; }
+  .howto-body p { color: var(--text-dim); font-size: 12px; line-height: 1.75; margin-bottom: 4px; }
+  .howto-body p b { color: var(--text); }
+  .howto-body .senal { margin-right: 6px; }
+  .howto-body .ejemplo {
+    color: var(--text-faint); font-size: 11px; font-style: italic;
+    border-left: 2px solid var(--border); padding-left: 10px; margin: 6px 0 2px;
+    line-height: 1.7;
+  }
+  th[title], .senal[title], .rvol-cell[title], .volbar-wrap[title], td[title] { cursor: help; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--green); color: #05231a; font-weight: 600;
+    padding: 10px 18px; border-radius: 8px; font-size: 12px;
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 60;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Volume &amp; Flow Monitor</div>
+  <div class="titlebar">
+    <div>
+      <h1>Volumen <span class="accent">&amp;</span> <span class="accent">Flujos</span></h1>
+      <div class="subtitle" id="subtitle">cargando…</div>
+    </div>
+    <div class="actions">
+      <button id="btnCopy">⧉ Copiar resumen</button>
+      <button id="btnPaste">Pegar datos</button>
+      <button id="btnRefresh" class="primary">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" id="tabEtf" role="tab">Sector ETFs · <span id="cntEtf">–</span></button>
+    <button class="tab" id="tabStk" role="tab">Acciones · <span id="cntStk">–</span></button>
+  </div>
+
+  <div id="content"><div class="loading">Cargando datos…</div></div>
+
+  <div class="status" id="status"></div>
+
+  <details class="howto">
+    <summary>📖 Cómo leer este dashboard (explicado sin tecnicismos)</summary>
+    <div class="howto-body">
+
+      <h4>¿Para qué sirve este tablero?</h4>
+      <p>El precio te dice <b>hacia dónde</b> se mueve un activo. El volumen te dice <b>cuánta gente
+      (y cuánta plata) acompaña</b> ese movimiento. Una suba con mucho volumen es como un aplauso de
+      estadio lleno; una suba sin volumen es un aplauso en una sala vacía: el mismo sonido no tiene
+      la misma fuerza. Este dashboard mide exactamente eso, activo por activo.</p>
+
+      <h4>RVOL — Volumen relativo</h4>
+      <p>Compara el volumen operado <b>hoy</b> contra el <b>promedio de las últimas 20 ruedas</b>
+      (una rueda = un día de mercado; 20 ruedas ≈ un mes). Un RVOL de 2.00 significa que hoy se
+      operó <b>el doble</b> de lo normal para ese activo. Es como mirar cuánta gente entró hoy a un
+      local comparado con un día típico.</p>
+      <p>🟢 <b>Más de 1.5</b> → mucho más movimiento que lo habitual: algo está pasando ahí.<br>
+      🟡 <b>Entre 1 y 1.5</b> → algo por encima de lo normal, interés moderado.<br>
+      ⚪ <b>Menos de 1</b> → día tranquilo, se operó menos que de costumbre.</p>
+
+      <h4>Vol $ — Volumen en dólares</h4>
+      <p>Cuánta <b>plata</b> se movió hoy en ese activo (precio × cantidad de acciones operadas).
+      Se muestra en dólares y no en cantidad de acciones porque si no, no se puede comparar: 10
+      millones de acciones de un papel de $5 mueven mucha menos plata que 1 millón de acciones de
+      un papel de $500. La barrita verde muestra el tamaño relativo dentro de la pestaña.</p>
+
+      <h4>Tend 5R — Tendencia de volumen de 5 ruedas</h4>
+      <p>Responde: ¿el interés en este activo <b>viene creciendo o enfriándose</b>? Compara el
+      volumen promedio de la última semana (5 ruedas) contra el del mes previo.
+      <b>↑ +40%</b> = la última semana se operó un 40% más que antes: el interés viene en aumento
+      sostenido, no fue un pico de un solo día. <b>↓ -30%</b> = el activo se está quedando sin
+      público.</p>
+
+      <h4>Δ% día — Variación del precio</h4>
+      <p>Cuánto subió o bajó el precio hoy. Por sí solo dice poco: la gracia está en <b>cruzarlo
+      con el volumen</b>, que es justamente lo que hace la columna Señal.</p>
+
+      <h4>Señal — El cruce de precio + volumen (la columna clave)</h4>
+      <p><span class="senal s-acum">ACUMULACIÓN</span> El precio subió (≥1%) <b>y</b> el volumen fue
+      alto (RVOL ≥ 1.5). Traducción: la suba tiene plata grande detrás. Cuando alguien compra en
+      serio, deja huella en el volumen. Es la señal de que la demanda es real.</p>
+      <p class="ejemplo">Ejemplo: XLE sube +1.8% con RVOL 2.3 → se operó más del doble de lo normal
+      mientras subía. Hay compradores con convicción.</p>
+      <p><span class="senal s-dist">DISTRIBUCIÓN</span> El precio cayó (≥1%) <b>y</b> el volumen fue
+      alto (RVOL ≥ 1.5). Traducción: la caída tiene ventas grandes detrás; posiciones importantes
+      están saliendo. Es la señal espejo de la anterior y suele anticipar más debilidad.</p>
+      <p class="ejemplo">Ejemplo: XLK cae -2.1% con RVOL 1.9 → no es una baja "de siesta", alguien
+      está vendiendo en tamaño.</p>
+      <p><span class="senal s-debil">SUBA DÉBIL</span> El precio subió (≥1%) <b>pero</b> con muy poco
+      volumen (RVOL &lt; 0.8). Traducción: sube "sin nafta". Las subas sin volumen suelen ser
+      frágiles: alcanza con poca venta para darlas vuelta. Ojo con entusiasmarse acá.</p>
+      <p class="ejemplo">Ejemplo: un papel sube +1.5% pero operando la mitad de lo normal → nadie
+      la está convalidando con plata.</p>
+      <p><span class="senal s-neutro">NEUTRO</span> Nada fuera de lo común: el movimiento de precio
+      fue chico, o el volumen estuvo dentro de lo normal. No hay lectura para hacer.</p>
+
+      <h4>Cuadrante RRG — El puente con el otro dashboard</h4>
+      <p>Esta columna trae la posición de cada activo en el <b>gráfico de rotación (RRG) semanal</b>,
+      que mide la fuerza de cada activo contra el S&amp;P 500. Son cuatro estados posibles, y se leen
+      como un ciclo que gira en sentido horario:</p>
+      <p><span class="quad-chip q-lid">LIDERANDO</span> Más fuerte que el mercado <b>y</b> acelerando.
+      Los ganadores del momento.<br>
+      <span class="quad-chip q-mej">MEJORANDO</span> Todavía más débil que el mercado, <b>pero
+      acelerando</b>. Acá suelen aparecer las rotaciones antes de que sean obvias.<br>
+      <span class="quad-chip q-deb">DEBILITANDO</span> Todavía fuerte, <b>pero frenando</b>. El
+      líder que empieza a cansarse.<br>
+      <span class="quad-chip q-rez">REZAGADO</span> Más débil que el mercado y sin señales de
+      mejora. Los olvidados.</p>
+      <p><b>S/D</b> significa "sin dato": el ticker tiene poca historia semanal (necesita ~16
+      semanas) o no está en el universo del RRG. SPY muestra "—" porque es la vara contra la que
+      se mide todo: no puede tener cuadrante propio.</p>
+
+      <h4>🔀 El cruce RRG × Volumen — para qué sirve combinar los dos</h4>
+      <p>El RRG mira <b>semanas</b> (la película); el volumen mira <b>el día</b> (la foto). Cruzarlos
+      responde la pregunta clave: <b>¿la rotación que muestra el RRG tiene plata de verdad detrás?</b></p>
+      <p><b>⚠ Liderando + Distribución:</b> el activo figura como líder en el RRG, pero hoy cayó con
+      volumen alto. Traducción: puede ser un líder en deterioro — el volumen diario suele avisar
+      antes de que el gráfico semanal lo refleje. Señal de precaución para quien lo tiene en cartera.</p>
+      <p><b>★ Mejorando (o Rezagado) + Acumulación:</b> el activo viene débil en el RRG, pero hoy
+      subió con volumen fuerte. Traducción: puede ser el arranque de una rotación con convicción —
+      el tipo de movimiento que después se ve entrar al cuadrante Liderando. Candidato a vigilar
+      (siempre contra los criterios de entrada, no por el entusiasmo del día).</p>
+      <p>Estas dos combinaciones aparecen destacadas en la tarjeta "Cruce RRG × Volumen" arriba de
+      la tabla cuando se dan, y también en el resumen para compartir.</p>
+      <p>Con el botón <b>"Agrupar por: Cuadrante RRG"</b> podés reordenar toda la tabla por estado
+      de rotación en vez de por rubro: ver todos los Liderando juntos con su volumen, todos los
+      Mejorando juntos, etc.</p>
+
+      <h4>💧 Flujos IBIT / ETHA</h4>
+      <p>Los ETF de Bitcoin (IBIT) y Ethereum (ETHA) publican cada día cuánta plata institucional
+      <b>entró</b> (creaciones, número positivo) o <b>salió</b> (rescates, número negativo). Es el
+      termómetro más directo de si los grandes fondos están comprando o vendiendo cripto. El dato
+      se carga a mano desde Farside y el "Acum 5R" suma la última semana: el flujo de un día puede
+      ser ruido, el de una semana marca tendencia.</p>
+
+      <h4>Aclaraciones importantes</h4>
+      <p><b>BTC-USD (badge 24/7):</b> Bitcoin spot no tiene horario: opera las 24 horas, los 7 días.
+      Su volumen ya viene expresado en dólares y su "día" nunca termina, así que el dato intradía
+      siempre es parcial. No es comparable 1 a 1 con una acción.</p>
+      <p><b>RVOL durante la rueda:</b> si mirás el dashboard a las 11 de la mañana de Nueva York, el
+      volumen del día está a medio hacer — un RVOL de 0.6 al mediodía puede terminar en 1.8 al
+      cierre. La foto definitiva es la de la última actualización del día (18 hs ARG).</p>
+      <p><b>SPY (badge BENCH):</b> es el ETF del S&amp;P 500 y funciona como referencia general del
+      mercado. No entra en el ranking de RVOL: está para comparar contra él.</p>
+
+    </div>
+  </details>
+
+  <div class="disclaimer">⚠️ Análisis técnico con fines educativos. NO constituye recomendación de inversión.</div>
+</div>
+
+<!-- Modal PEGAR DATOS -->
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <h2>Pegar datos manualmente</h2>
+    <p>Abrí el archivo <b>volumen_data.json</b> de tu Google Drive (lo genera el Apps Script
+    "VOLUMEN DS ONLINE"), copiá todo el contenido y pegalo acá. Es el respaldo por si la
+    carga automática desde la Web App falla.</p>
+    <textarea id="pasteArea" placeholder='{"series":{...}}'></textarea>
+    <div class="row">
+      <button id="btnModalCancel">Cancelar</button>
+      <button id="btnModalOk" class="primary">Cargar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CONFIGURACIÓN — LO ÚNICO QUE TENÉS QUE EDITAR
+   1) DATA_URL: la Web App del Apps Script de VOLUMEN (termina en /exec)
+   2) RRG_URL:  la Web App del Apps Script del RRG (la que YA tenés publicada
+      para el dashboard RRG — la misma URL, no hay que crear nada nuevo).
+      Sirve para clasificar cada ticker por cuadrante (Liderando, Mejorando,
+      Debilitando, Rezagado) y cruzarlo con el volumen. Si la dejás vacía,
+      el dashboard funciona igual pero sin la columna de cuadrante.
+   ═══════════════════════════════════════════════════════════════════════ */
+const DATA_URL = 'https://script.google.com/macros/s/AKfycbzYEixkMV5E4Zm7RUcqOejndboyFOamG-M4cHp-jQL3Fdd7_PlSEW77X1Wn0rRLFIciiA/exec';
+const RRG_URL  = 'https://script.google.com/macros/s/AKfycbzYEixkMV5E4Zm7RUcqOejndboyFOamG-M4cHp-jQL3Fdd7_PlSEW77X1Wn0rRLFIciiA/exec';
+
+/* ── Parámetros RRG (idénticos a los default de tu dashboard RRG) ────── */
+const RRG_SMOOTHING = 10; // SMA del RS, en semanas
+const RRG_MOMENTUM  = 5;  // período del ROC, en semanas
+
+const QUADS = {
+  LID: { label: 'LIDERANDO',   cls: 'q-lid', rank: 4 },
+  MEJ: { label: 'MEJORANDO',   cls: 'q-mej', rank: 3 },
+  DEB: { label: 'DEBILITANDO', cls: 'q-deb', rank: 2 },
+  REZ: { label: 'REZAGADO',    cls: 'q-rez', rank: 1 },
+};
+
+/* ── Universos y grupos (mismo orden que el Apps Script) ─────────────── */
+const GRUPOS_ETF = [
+  { nombre: 'Benchmark',        tickers: ['SPY'] },
+  { nombre: 'Sectoriales SPDR', tickers: ['XLV','XLF','XLI','XLU','XLB','XLP','XLRE','XLY','XLC','XLK','XLE'] },
+  { nombre: 'Tech / Semis',     tickers: ['SOXX','SMH','IGV','QTUM'] },
+  { nombre: 'Cripto',           tickers: ['IBIT','ETHA','WGMI','CONY'] },
+  { nombre: 'Oro / Materiales', tickers: ['GLD','GDX','COPX'] },
+  { nombre: 'Otros',            tickers: ['ITA','EWZ','EWY','UFO'] },
+];
+const GRUPOS_STK = [
+  { nombre: 'Megacaps',              tickers: ['NVDA','MSFT','AAPL','AMZN','META','TSLA'] },
+  { nombre: 'Semis / Hardware',      tickers: ['MU','ASML'] },
+  { nombre: 'Software / AI',         tickers: ['NOW','PLTR','IBM','CRWV'] },
+  { nombre: 'Cripto-correlacionadas',tickers: ['MSTR','IREN'] },
+  { nombre: 'Latam',                 tickers: ['MELI','NU'] },
+  { nombre: 'Salud',                 tickers: ['LLY','MDT','HIMS'] },
+  { nombre: 'Otros',                 tickers: ['CAT','OKLO','ASTS'] },
+  { nombre: 'Cripto spot · 24/7',    tickers: ['BTC-USD'] },
+];
+const CRYPTO_SPOT = new Set(['BTC-USD']); // volumen de Yahoo ya viene en USD
+
+const LS_DATA = 'volDash_data_v1';
+const LS_FLOWS = 'volDash_flujos_v1';
+const LS_RRG = 'volDash_rrg_v1';
+
+/* ── Estado ──────────────────────────────────────────────────────────── */
+let DATA = null;          // JSON del Apps Script de volumen
+let METRICS = {};         // { ticker: {...} }
+let QUAD = {};            // { ticker: {code, label, cls, rank, ratio, mom} }
+let rrgLoaded = false;
+let activeTab = 'etf';
+let groupMode = 'bloque'; // 'bloque' | 'cuadrante'
+let sortKey = null;       // null = agrupado
+let sortDir = -1;
+
+/* ── Utilidades ──────────────────────────────────────────────────────── */
+const $ = (id) => document.getElementById(id);
+const mean = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0;
+const fmtPct = (v, dec=2) => (v>0?'+':'') + v.toFixed(dec) + '%';
+const fmtPctT = (v) => (v>0?'+':'') + v.toFixed(1) + '%'; // versión corta para tooltips
+const clsPct = (v) => v > 0.05 ? 'pos' : v < -0.05 ? 'neg' : 'flat';
+
+function fmtDollar(v) {
+  if (!isFinite(v) || v <= 0) return '—';
+  if (v >= 1e12) return '$' + (v/1e12).toFixed(2) + 'T';
+  if (v >= 1e9)  return '$' + (v/1e9).toFixed(1) + 'B';
+  if (v >= 1e6)  return '$' + (v/1e6).toFixed(0) + 'M';
+  return '$' + (v/1e3).toFixed(0) + 'K';
+}
+function fmtPrice(v) {
+  if (!isFinite(v)) return '—';
+  if (v >= 10000) return v.toLocaleString('en-US', {maximumFractionDigits: 0});
+  if (v >= 100) return v.toFixed(1);
+  return v.toFixed(2);
+}
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ── Cálculos por ticker ─────────────────────────────────────────────── */
+function computeMetrics(sym, serie) {
+  const c = serie.close, v = serie.volume, n = c.length;
+  if (n < 26) return null;
+
+  const lastClose = c[n-1], prevClose = c[n-2];
+  const lastVol = v[n-1];
+  const chg = prevClose ? (lastClose/prevClose - 1) * 100 : 0;
+
+  // RVOL: volumen de hoy vs SMA20 de las 20 ruedas ANTERIORES (sin incluir hoy)
+  const sma20prev = mean(v.slice(n-21, n-1));
+  const rvol = sma20prev > 0 ? lastVol / sma20prev : 0;
+
+  // Tendencia 5R: SMA5 de las últimas 5 vs SMA20 de las 20 previas a esas 5
+  const sma5 = mean(v.slice(n-5));
+  const sma20base = mean(v.slice(n-25, n-5));
+  const trend5 = sma20base > 0 ? (sma5/sma20base - 1) * 100 : 0;
+
+  // Volumen en dólares (BTC-USD: Yahoo ya lo reporta en USD, NO multiplicar)
+  const dollarVol = CRYPTO_SPOT.has(sym) ? lastVol : lastVol * lastClose;
+
+  // Señal precio + volumen (con explicación en criollo para el tooltip)
+  const vecesVol = rvol.toFixed(1) + '× su volumen normal';
+  let senal = 'NEUTRO', senalCls = 's-neutro';
+  let senalWhy = 'Sin lectura: el precio se movió poco o el volumen estuvo dentro de lo normal. No hay nada para interpretar acá.';
+  if (chg >= 1 && rvol >= 1.5) {
+    senal = 'ACUMULACIÓN'; senalCls = 's-acum';
+    senalWhy = '¿Por qué? Subió ' + fmtPctT(chg) + ' operando ' + vecesVol + '. Una suba con tanto volumen indica compradores grandes con convicción: la demanda es real.';
+  } else if (chg <= -1 && rvol >= 1.5) {
+    senal = 'DISTRIBUCIÓN'; senalCls = 's-dist';
+    senalWhy = '¿Por qué? Cayó ' + fmtPctT(chg) + ' operando ' + vecesVol + '. Una caída con tanto volumen indica ventas grandes: posiciones importantes están saliendo.';
+  } else if (chg >= 1 && rvol < 0.8) {
+    senal = 'SUBA DÉBIL'; senalCls = 's-debil';
+    senalWhy = '¿Por qué? Subió ' + fmtPctT(chg) + ' pero operando apenas ' + vecesVol + '. Sube “sin nafta”: las subas sin volumen suelen ser frágiles.';
+  }
+
+  return { sym, lastClose, chg, rvol, trend5, dollarVol,
+           lastDate: serie.dates[n-1], senal, senalCls, senalWhy };
+}
+
+function rvolDotClass(rvol) { return rvol > 1.5 ? 'g' : rvol >= 1 ? 'y' : 'n'; }
+
+/* ── Cuadrantes RRG (misma metodología que tu dashboard RRG) ─────────────
+   A partir de los cierres SEMANALES del rrg_data.json:
+   1. RS = precio del ticker / precio de SPY (fuerza relativa cruda)
+   2. RS-Ratio = 100 × (RS / SMA10 del RS)  → ¿más fuerte que el SPY?
+   3. RS-Momentum = 100 × (RS-Ratio hoy / RS-Ratio hace 5 semanas) → ¿acelera?
+   Cuadrante: ≥100/≥100 Liderando · <100/≥100 Mejorando ·
+              ≥100/<100 Debilitando · <100/<100 Rezagado
+   Los valores pueden diferir en decimales de tu dashboard RRG, pero la
+   clasificación por cuadrante coincide. Tickers con poca historia semanal
+   (necesitan ≥ 16 semanas, como NASA en su momento) quedan sin dato.     */
+function computeQuadrants(rrgJson) {
+  QUAD = {};
+  const prices = rrgJson.prices || {};
+  const spy = prices.SPY;
+  if (!spy) return;
+
+  Object.keys(prices).forEach(sym => {
+    if (sym === 'SPY') return;
+    const p = prices[sym];
+    if (!p) return;
+
+    // RS crudo, solo en semanas donde hay dato de ambos
+    const rs = [];
+    for (let i = 0; i < spy.length; i++) {
+      if (p[i] != null && spy[i] != null && spy[i] !== 0) rs.push(p[i] / spy[i]);
+      else rs.push(null);
+    }
+    // Compactar nulls del inicio (tickers nuevos)
+    const firstIdx = rs.findIndex(v => v != null);
+    if (firstIdx === -1) return;
+    const rsClean = rs.slice(firstIdx).filter(v => v != null);
+
+    const need = RRG_SMOOTHING + RRG_MOMENTUM + 1; // 16 semanas mínimo
+    if (rsClean.length < need) return;
+
+    // Serie de RS-Ratio (una por semana, desde que hay SMA completa)
+    const ratios = [];
+    for (let i = RRG_SMOOTHING - 1; i < rsClean.length; i++) {
+      const sma = mean(rsClean.slice(i - RRG_SMOOTHING + 1, i + 1));
+      ratios.push(sma > 0 ? (rsClean[i] / sma) * 100 : null);
+    }
+    if (ratios.length < RRG_MOMENTUM + 1) return;
+
+    const ratio = ratios[ratios.length - 1];
+    const ratioPast = ratios[ratios.length - 1 - RRG_MOMENTUM];
+    if (ratio == null || ratioPast == null || ratioPast === 0) return;
+    const mom = (ratio / ratioPast) * 100;
+
+    let q;
+    if (ratio >= 100 && mom >= 100) q = QUADS.LID;
+    else if (ratio < 100 && mom >= 100) q = QUADS.MEJ;
+    else if (ratio >= 100 && mom < 100) q = QUADS.DEB;
+    else q = QUADS.REZ;
+
+    QUAD[sym] = { label: q.label, cls: q.cls, rank: q.rank,
+                  ratio: ratio, mom: mom };
+  });
+  rrgLoaded = Object.keys(QUAD).length > 0;
+}
+
+async function fetchRRG() {
+  try {
+    if (!RRG_URL) throw new Error('no-url');
+    const res = await fetch(RRG_URL, { redirect: 'follow' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.prices || !json.prices.SPY) throw new Error('JSON RRG inválido');
+    computeQuadrants(json);
+    try { localStorage.setItem(LS_RRG, JSON.stringify(json)); } catch {}
+  } catch (e) {
+    // Fallback: caché del RRG
+    const cached = localStorage.getItem(LS_RRG);
+    if (cached) {
+      try { computeQuadrants(JSON.parse(cached)); } catch {}
+    }
+  }
+}
+
+/* ── Flujos IBIT/ETHA (localStorage) ─────────────────────────────────── */
+function loadFlows() {
+  try { return JSON.parse(localStorage.getItem(LS_FLOWS)) || []; }
+  catch { return []; }
+}
+function saveFlowEntry(date, ibit, etha) {
+  let flows = loadFlows().filter(f => f.date !== date);
+  flows.push({ date, ibit, etha });
+  flows.sort((a,b) => a.date.localeCompare(b.date));
+  flows = flows.slice(-40); // conservar ~2 meses
+  localStorage.setItem(LS_FLOWS, JSON.stringify(flows));
+  return flows;
+}
+function flowSum5(flows, key) {
+  return flows.slice(-5).reduce((a,f) => a + (Number(f[key]) || 0), 0);
+}
+
+/* ── Carga de datos ──────────────────────────────────────────────────── */
+async function fetchData(manual) {
+  const btn = $('btnRefresh');
+  btn.disabled = true; btn.textContent = '↻ Cargando…';
+  const rrgPromise = fetchRRG(); // en paralelo; si falla, no bloquea nada
+  try {
+    if (!DATA_URL) throw new Error('no-url');
+    const res = await fetch(DATA_URL, { redirect: 'follow' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.series || !json.series.SPY) throw new Error('JSON inválido (falta series.SPY)');
+    await rrgPromise;
+    setData(json, true);
+    if (manual) toast('Datos actualizados' + (rrgLoaded ? ' · cuadrantes RRG OK' : ''));
+  } catch (e) {
+    await rrgPromise;
+    // Fallback: caché local
+    const cached = localStorage.getItem(LS_DATA);
+    if (cached && !DATA) {
+      try { setData(JSON.parse(cached), false); } catch {}
+    }
+    if (!DATA) {
+      renderError(e.message === 'no-url');
+    } else if (manual) {
+      toast(e.message === 'no-url'
+        ? 'Configurá DATA_URL en el HTML o usá Pegar datos'
+        : 'No se pudo actualizar — mostrando caché');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '↻ Actualizar';
+  }
+}
+
+function setData(json, cache) {
+  DATA = json;
+  METRICS = {};
+  Object.keys(json.series).forEach(sym => {
+    const m = computeMetrics(sym, json.series[sym]);
+    if (m) METRICS[sym] = m;
+  });
+  if (cache) {
+    try { localStorage.setItem(LS_DATA, JSON.stringify(json)); } catch {}
+  }
+  const meta = json._meta || {};
+  const lastDate = METRICS.SPY ? METRICS.SPY.lastDate : '—';
+  $('subtitle').innerHTML =
+    'vs SPY · diario · última rueda: <b>' + lastDate + '</b> · generado: ' +
+    (meta.generatedAtARG || '—') + ' hs (ARG)' +
+    ' <span class="warn">· RVOL intradía es parcial hasta el cierre de NY</span>';
+  render();
+}
+
+/* ── Render principal ────────────────────────────────────────────────── */
+function currentGroups() { return activeTab === 'etf' ? GRUPOS_ETF : GRUPOS_STK; }
+
+function tickersInTab() {
+  return currentGroups().flatMap(g => g.tickers).filter(t => METRICS[t]);
+}
+
+function render() {
+  if (!DATA) return;
+  const groups = currentGroups();
+  const avail = tickersInTab();
+  $('cntEtf').textContent = GRUPOS_ETF.flatMap(g=>g.tickers).filter(t=>METRICS[t]).length;
+  $('cntStk').textContent = GRUPOS_STK.flatMap(g=>g.tickers).filter(t=>METRICS[t]).length;
+
+  // Top 3 RVOL (excluye SPY del ranking, es referencia)
+  const ranked = avail.filter(t => t !== 'SPY')
+    .map(t => METRICS[t]).sort((a,b) => b.rvol - a.rvol);
+  const top3 = ranked.slice(0,3);
+  const acum = ranked.filter(m => m.senal === 'ACUMULACIÓN');
+  const dist = ranked.filter(m => m.senal === 'DISTRIBUCIÓN');
+
+  let html = '';
+
+  // ── Summary strip
+  html += '<div class="summary">';
+  html += '<div class="card"><h3>🔥 Top RVOL del día</h3><div class="top-rvol">';
+  top3.forEach((m,i) => {
+    html += '<div class="top-rvol-row"><span class="rank">'+(i+1)+'</span>' +
+      '<span class="tk">'+m.sym+'</span>' +
+      '<span class="rv">RVOL '+m.rvol.toFixed(2)+'</span>' +
+      '<span class="'+clsPct(m.chg)+'">'+fmtPct(m.chg)+'</span></div>';
+  });
+  if (!top3.length) html += '<div class="muted">Sin datos</div>';
+  html += '</div></div>';
+
+  html += '<div class="card"><h3>⚡ Alertas precio + volumen</h3><div class="alert-list">';
+  const qTag = (m) => {
+    const q = QUAD[m.sym];
+    return q ? ' <span class="quad-chip ' + q.cls + '">' + q.label + '</span>' : '';
+  };
+  if (acum.length) {
+    acum.slice(0,3).forEach(m => {
+      html += '<div class="alert-row" title="'+m.senalWhy+'"><span class="pos">▲</span> <span class="tk">'+m.sym+'</span>'+qTag(m)+' ' +
+        'subió '+fmtPct(m.chg)+' operando <b>'+m.rvol.toFixed(1)+'×</b> su volumen normal → <span class="pos">compra con convicción</span></div>';
+    });
+  }
+  if (dist.length) {
+    dist.slice(0,3).forEach(m => {
+      html += '<div class="alert-row" title="'+m.senalWhy+'"><span class="neg">▼</span> <span class="tk">'+m.sym+'</span>'+qTag(m)+' ' +
+        'cayó '+fmtPct(m.chg)+' operando <b>'+m.rvol.toFixed(1)+'×</b> su volumen normal → <span class="neg">venta en tamaño</span></div>';
+    });
+  }
+  if (!acum.length && !dist.length) html += '<div class="muted">Hoy ningún activo se movió más de ±1% con volumen alto (RVOL ≥ 1.5). Sin lecturas de convicción para hacer.</div>';
+  html += '</div></div>';
+  html += '</div>';
+
+  // ── Lecturas cruzadas RRG × volumen (solo si hay cuadrantes cargados)
+  if (rrgLoaded) {
+    const lidDist = dist.filter(m => QUAD[m.sym] && QUAD[m.sym].rank === 4);
+    const rotAcum = acum.filter(m => QUAD[m.sym] && (QUAD[m.sym].rank === 3 || QUAD[m.sym].rank === 1));
+    if (lidDist.length || rotAcum.length) {
+      html += '<div class="card" style="margin-bottom:14px;"><h3>🔀 Cruce RRG × Volumen (lo más importante del día)</h3><div class="alert-list">';
+      lidDist.forEach(m => {
+        html += '<div class="alert-row"><span class="neg">⚠</span> <span class="tk">'+m.sym+'</span> ' +
+          'está <span class="quad-chip q-lid">LIDERANDO</span> en el RRG pero hoy cayó '+fmtPct(m.chg)+' con <b>'+m.rvol.toFixed(1)+'×</b> su volumen normal → ' +
+          '<span class="neg">posible líder en deterioro</span>: el volumen le está poniendo fecha a lo que el RRG semanal todavía no muestra</div>';
+      });
+      rotAcum.forEach(m => {
+        const q = QUAD[m.sym];
+        html += '<div class="alert-row"><span class="pos">★</span> <span class="tk">'+m.sym+'</span> ' +
+          'está <span class="quad-chip '+q.cls+'">'+q.label+'</span> en el RRG y hoy subió '+fmtPct(m.chg)+' con <b>'+m.rvol.toFixed(1)+'×</b> su volumen normal → ' +
+          '<span class="pos">rotación temprana con plata detrás</span>: candidato a vigilar contra tus criterios de entrada</div>';
+      });
+      html += '</div></div>';
+    }
+  }
+
+  // ── Panel de flujos (solo pestaña ETFs)
+  if (activeTab === 'etf') html += renderFlows();
+
+  // ── Toggle de agrupación
+  html += '<div class="group-toggle">Agrupar por: ' +
+    '<button class="gt-btn'+(groupMode==='bloque'?' active':'')+'" data-gm="bloque">Bloques</button>' +
+    '<button class="gt-btn'+(groupMode==='cuadrante'?' active':'')+'" data-gm="cuadrante"'+(rrgLoaded?'':' disabled title="Configurá RRG_URL en el HTML para habilitar esta vista"')+'>Cuadrante RRG</button>' +
+    (rrgLoaded ? '' : ' <span class="muted">(cuadrantes no disponibles: falta RRG_URL o el RRG no respondió)</span>') +
+    '</div>';
+
+  // ── Tabla
+  html += renderTable(groups, avail);
+
+  $('content').innerHTML = html;
+  bindTableEvents();
+  if (activeTab === 'etf') bindFlowEvents();
+
+  const meta = DATA._meta || {};
+  $('status').textContent = (meta.tickersOk||'?') + '/' + (meta.tickersRequested||'?') +
+    ' tickers · fuente: Yahoo Finance vía Apps Script' +
+    (meta.failed && meta.failed.length ? ' · fallaron: ' + meta.failed.join(', ') : '');
+}
+
+function renderFlows() {
+  const flows = loadFlows();
+  const last = flows[flows.length-1];
+  const today = new Date().toISOString().slice(0,10);
+  let html = '<div class="flows">';
+  html += '<div class="flows-head"><h3 style="font-size:10px;letter-spacing:.25em;color:var(--text-faint);text-transform:uppercase;font-weight:500;">💧 Flujos diarios IBIT / ETHA — carga manual (Farside, en millones USD)</h3>';
+  html += '<span class="muted">+ creaciones · − rescates · se guarda en este navegador</span></div>';
+  html += '<div class="flows-form">';
+  html += '<div class="field"><label>Fecha</label><input type="date" id="flowDate" value="'+(last ? last.date : today)+'"></div>';
+  html += '<div class="field"><label>IBIT (MUSD)</label><input type="number" step="0.1" id="flowIbit" placeholder="+120.5" value="'+(last ? last.ibit : '')+'"></div>';
+  html += '<div class="field"><label>ETHA (MUSD)</label><input type="number" step="0.1" id="flowEtha" placeholder="-35.0" value="'+(last ? last.etha : '')+'"></div>';
+  html += '<button id="btnFlowSave" class="primary">Guardar</button>';
+  html += '</div>';
+
+  html += '<div class="flows-viz">';
+  ['ibit','etha'].forEach(key => {
+    const label = key.toUpperCase();
+    const sum5 = flowSum5(flows, key);
+    const series = flows.slice(-15);
+    html += '<div class="flow-chart"><div class="fc-head"><span><b>'+label+'</b> · últimas '+series.length+' cargas</span>' +
+      '<span class="'+(sum5>=0?'pos':'neg')+'">Acum 5R: '+(sum5>0?'+':'')+sum5.toFixed(0)+' MUSD</span></div>';
+    if (!series.length) {
+      html += '<div class="flow-empty">Sin flujos cargados todavía. Cargá el primero arriba.</div>';
+    } else {
+      const maxAbs = Math.max(...series.map(f => Math.abs(Number(f[key])||0)), 1);
+      html += '<div class="flow-bars">';
+      series.forEach(f => {
+        const val = Number(f[key]) || 0;
+        const h = Math.max(4, Math.abs(val)/maxAbs*100);
+        html += '<div class="flow-bar-col" title="'+f.date+': '+(val>0?'+':'')+val+' MUSD">';
+        html += '<div class="fb-half top">'+(val>0 ? '<div class="fb up" style="height:'+h+'%"></div>' : '')+'</div>';
+        html += '<div class="fb-half bot">'+(val<0 ? '<div class="fb dn" style="height:'+h+'%"></div>' : '')+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function renderTable(groups, avail) {
+  const cols = [
+    { key: null,        label: 'Ticker / Grupo',
+      tip: 'Clic acá para volver a la vista agrupada por bloques' },
+    { key: 'lastClose', label: 'Precio',
+      tip: 'Último precio de cierre (o el actual si el mercado está abierto)' },
+    { key: 'chg',       label: 'Δ% día',
+      tip: 'Cuánto subió o bajó el precio hoy vs el cierre anterior. Solo no dice mucho: hay que cruzarlo con el volumen (columna Señal)' },
+    { key: 'rvol',      label: 'RVOL',
+      tip: 'Volumen relativo: cuántas veces el volumen normal se operó hoy. 2.00 = el doble de lo habitual. 🟢 más de 1.5 · 🟡 entre 1 y 1.5 · ⚪ menos de 1' },
+    { key: 'dollarVol', label: 'Vol $',
+      tip: 'Plata operada hoy (precio × acciones). En dólares para poder comparar activos entre sí' },
+    { key: 'trend5',    label: 'Tend 5R',
+      tip: '¿El interés viene creciendo o enfriándose? Compara el volumen de la última semana (5 ruedas) contra el del mes previo. ↑ = aumenta sostenido, ↓ = se enfría' },
+    { key: 'senal',     label: 'Señal',
+      tip: 'El cruce precio + volumen. Pasá el mouse sobre cada etiqueta para ver por qué disparó. La explicación completa está abajo, en "Cómo leer este dashboard"' },
+    { key: 'quadRank',  label: 'Cuadrante RRG',
+      tip: 'En qué cuadrante del RRG semanal está el ticker: LIDERANDO (fuerte y acelerando), MEJORANDO (débil pero acelerando), DEBILITANDO (fuerte pero frenando), REZAGADO (débil y frenando). Se calcula con los mismos datos y parámetros de tu dashboard RRG' },
+  ];
+  const NCOLS = cols.length;
+  const maxDollar = Math.max(...avail.map(t => METRICS[t].dollarVol), 1);
+
+  let html = '<div class="table-wrap"><table><thead><tr>';
+  cols.forEach(c => {
+    const sorted = sortKey === c.key && c.key !== null;
+    html += '<th data-key="'+(c.key||'')+'" class="'+(sorted?'sorted':'')+'" title="'+c.tip+'">' + c.label +
+      (sorted ? (sortDir<0?' ▼':' ▲') : '') + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  const rowHtml = (m, isBench) => {
+    const barW = Math.max(3, Math.sqrt(m.dollarVol/maxDollar)*100);
+    const is247 = CRYPTO_SPOT.has(m.sym);
+    const rvolTip = 'Hoy se operó ' + m.rvol.toFixed(2) + '× el volumen promedio de las últimas 20 ruedas' +
+      (m.rvol > 1.5 ? ' — mucho más movimiento que lo habitual' : m.rvol >= 1 ? ' — algo por encima de lo normal' : ' — día tranquilo');
+    const volTip = is247
+      ? 'Plata operada en las últimas 24 hs (Yahoo ya lo reporta en dólares)'
+      : 'Plata operada hoy: precio × cantidad de acciones';
+    const trendTip = 'El volumen de las últimas 5 ruedas está ' + Math.abs(m.trend5).toFixed(0) + '% ' +
+      (m.trend5 >= 0 ? 'por ENCIMA' : 'por DEBAJO') + ' del promedio del mes previo → el interés ' +
+      (m.trend5 >= 0 ? 'viene creciendo' : 'se está enfriando');
+    const q = QUAD[m.sym];
+    let quadCell;
+    if (isBench) {
+      quadCell = '<span class="muted" title="SPY es el benchmark: los cuadrantes se miden CONTRA él, así que no tiene cuadrante propio">—</span>';
+    } else if (q) {
+      const quadTip = 'RS-Ratio ' + q.ratio.toFixed(1) + ' · RS-Momentum ' + q.mom.toFixed(1) +
+        ' (calculado con la misma metodología de tu dashboard RRG: suavizado 10 semanas, momentum 5 semanas, vs SPY)';
+      quadCell = '<span class="quad-chip '+q.cls+'" title="'+quadTip+'">'+q.label+'</span>';
+    } else {
+      quadCell = '<span class="muted" title="Sin cuadrante: falta configurar RRG_URL, el ticker no está en el RRG, o tiene menos de 16 semanas de historia (como le pasaba a NASA)">S/D</span>';
+    }
+    return '<tr class="'+(isBench?'bench-row':'')+'">' +
+      '<td><span class="tk-cell"><span class="tk-name">'+m.sym+'</span>' +
+        (isBench ? '<span class="badge bBench" title="Benchmark: referencia general del mercado, no entra en el ranking">BENCH</span>' : '') +
+        (is247 ? '<span class="badge b247" title="Cripto spot: opera 24/7, su volumen no es comparable 1 a 1 con una acción y el dato intradía siempre es parcial">24/7</span>' : '') +
+      '</span></td>' +
+      '<td>'+fmtPrice(m.lastClose)+'</td>' +
+      '<td class="'+clsPct(m.chg)+'">'+fmtPct(m.chg)+'</td>' +
+      '<td><span class="rvol-cell" title="'+rvolTip+'"><span class="dot '+rvolDotClass(m.rvol)+'"></span>'+m.rvol.toFixed(2)+'</span></td>' +
+      '<td><span class="volbar-wrap" title="'+volTip+'"><span class="volbar"><i style="width:'+barW+'%"></i></span>'+fmtDollar(m.dollarVol)+'</span></td>' +
+      '<td class="'+clsPct(m.trend5)+'" title="'+trendTip+'">'+(m.trend5>=0?'↑ ':'↓ ')+fmtPct(m.trend5,0)+'</td>' +
+      '<td><span class="senal '+m.senalCls+'" title="'+m.senalWhy+'">'+m.senal+'</span></td>' +
+      '<td>'+quadCell+'</td>' +
+    '</tr>';
+  };
+
+  if (sortKey === null) {
+    if (groupMode === 'cuadrante' && rrgLoaded) {
+      // Vista agrupada por cuadrante RRG (de mejor a peor + sin dato)
+      const buckets = [
+        { rank: 4, nombre: 'LIDERANDO — fuertes y acelerando' },
+        { rank: 3, nombre: 'MEJORANDO — débiles pero acelerando (rotación entrante)' },
+        { rank: 2, nombre: 'DEBILITANDO — fuertes pero frenando (ojo acá)' },
+        { rank: 1, nombre: 'REZAGADO — débiles y frenando' },
+      ];
+      buckets.forEach(b => {
+        const tks = avail.filter(t => t !== 'SPY' && QUAD[t] && QUAD[t].rank === b.rank);
+        if (!tks.length) return;
+        // Dentro del cuadrante, ordenados por RVOL descendente: primero los que tienen volumen
+        tks.sort((a,bt) => METRICS[bt].rvol - METRICS[a].rvol);
+        html += '<tr class="group-row"><td colspan="'+NCOLS+'">'+b.nombre+' · '+tks.length+'</td></tr>';
+        tks.forEach(t => { html += rowHtml(METRICS[t], false); });
+      });
+      const sinDato = avail.filter(t => t !== 'SPY' && !QUAD[t]);
+      if (sinDato.length) {
+        html += '<tr class="group-row"><td colspan="'+NCOLS+'">SIN CUADRANTE (poca historia o fuera del RRG) · '+sinDato.length+'</td></tr>';
+        sinDato.forEach(t => { html += rowHtml(METRICS[t], false); });
+      }
+      if (METRICS.SPY && activeTab === 'etf') {
+        html += '<tr class="group-row"><td colspan="'+NCOLS+'">BENCHMARK</td></tr>';
+        html += rowHtml(METRICS.SPY, true);
+      }
+    } else {
+      // Vista agrupada por bloques (default)
+      groups.forEach(g => {
+        const tks = g.tickers.filter(t => METRICS[t]);
+        if (!tks.length) return;
+        html += '<tr class="group-row"><td colspan="'+NCOLS+'">'+g.nombre+' · '+tks.length+'</td></tr>';
+        tks.forEach(t => { html += rowHtml(METRICS[t], t === 'SPY'); });
+      });
+    }
+  } else {
+    // Vista plana ordenada
+    const rows = avail.map(t => METRICS[t]);
+    const getVal = (m) => sortKey === 'quadRank'
+      ? (m.sym === 'SPY' ? -1 : (QUAD[m.sym] ? QUAD[m.sym].rank : 0))
+      : m[sortKey];
+    rows.sort((a,b) => {
+      const va = getVal(a), vb = getVal(b);
+      if (typeof va === 'string') return sortDir * va.localeCompare(vb);
+      return sortDir * (va - vb);
+    });
+    rows.forEach(m => { html += rowHtml(m, m.sym === 'SPY'); });
+  }
+
+  html += '</tbody></table></div>';
+  html += '<div class="muted" style="margin-top:8px;">Clic en un encabezado para ordenar · clic en "Ticker / Grupo" para volver a la vista agrupada · BTC-USD: volumen de Yahoo ya expresado en USD, sesión continua 24/7 (el dato intradía es parcial)</div>';
+  return html;
+}
+
+/* ── Eventos ─────────────────────────────────────────────────────────── */
+function bindTableEvents() {
+  document.querySelectorAll('thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (!key) { sortKey = null; render(); return; }
+      if (sortKey === key) sortDir *= -1;
+      else { sortKey = key; sortDir = -1; }
+      render();
+    });
+  });
+  document.querySelectorAll('.gt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      groupMode = btn.dataset.gm;
+      sortKey = null; // el toggle siempre vuelve a vista agrupada
+      render();
+    });
+  });
+}
+
+function bindFlowEvents() {
+  $('btnFlowSave').addEventListener('click', () => {
+    const date = $('flowDate').value;
+    const ibit = $('flowIbit').value;
+    const etha = $('flowEtha').value;
+    if (!date) { toast('Falta la fecha'); return; }
+    if (ibit === '' && etha === '') { toast('Cargá al menos un flujo'); return; }
+    saveFlowEntry(date, ibit === '' ? 0 : Number(ibit), etha === '' ? 0 : Number(etha));
+    toast('Flujo guardado · ' + date);
+    render();
+  });
+}
+
+$('tabEtf').addEventListener('click', () => { activeTab = 'etf'; sortKey = null;
+  $('tabEtf').classList.add('active'); $('tabStk').classList.remove('active'); render(); });
+$('tabStk').addEventListener('click', () => { activeTab = 'stk'; sortKey = null;
+  $('tabStk').classList.add('active'); $('tabEtf').classList.remove('active'); render(); });
+
+$('btnRefresh').addEventListener('click', () => fetchData(true));
+
+/* ── Modal pegar datos ───────────────────────────────────────────────── */
+$('btnPaste').addEventListener('click', () => { $('modalBack').classList.add('open'); $('pasteArea').focus(); });
+$('btnModalCancel').addEventListener('click', () => $('modalBack').classList.remove('open'));
+$('modalBack').addEventListener('click', (e) => { if (e.target === $('modalBack')) $('modalBack').classList.remove('open'); });
+$('btnModalOk').addEventListener('click', () => {
+  try {
+    const json = JSON.parse($('pasteArea').value);
+    if (!json.series || !json.series.SPY) throw new Error('falta series.SPY');
+    setData(json, true);
+    $('modalBack').classList.remove('open');
+    $('pasteArea').value = '';
+    toast('Datos cargados manualmente');
+  } catch (e) {
+    toast('JSON inválido: ' + e.message);
+  }
+});
+
+/* ── Copiar resumen (formato WhatsApp) ───────────────────────────────── */
+$('btnCopy').addEventListener('click', () => {
+  if (!DATA) { toast('Sin datos para resumir'); return; }
+  const fecha = METRICS.SPY ? METRICS.SPY.lastDate : '';
+  const [y,mo,d] = fecha.split('-');
+  const fechaFmt = d && mo ? d+'/'+mo : fecha;
+
+  const quadShort = (sym) => {
+    const q = QUAD[sym];
+    if (!q) return '';
+    const abrev = { 4:'Liderando', 3:'Mejorando', 2:'Debilitando', 1:'Rezagado' }[q.rank];
+    return ', ' + abrev;
+  };
+
+  const buildSection = (groups, titulo) => {
+    const tks = groups.flatMap(g=>g.tickers).filter(t => METRICS[t] && t !== 'SPY');
+    const ranked = tks.map(t => METRICS[t]).sort((a,b)=>b.rvol-a.rvol);
+    let s = '*' + titulo + ' — TOP RVOL*\n';
+    ranked.slice(0,3).forEach(m => {
+      const emoji = m.rvol > 1.5 ? '🟢' : m.rvol >= 1 ? '🟡' : '⚪';
+      s += emoji+' '+m.sym+' RVOL '+m.rvol.toFixed(2)+' · '+fmtPct(m.chg)+' · '+fmtDollar(m.dollarVol)+
+        (QUAD[m.sym] ? ' · '+QUAD[m.sym].label.charAt(0)+QUAD[m.sym].label.slice(1).toLowerCase() : '')+'\n';
+    });
+    const acum = ranked.filter(m=>m.senal==='ACUMULACIÓN');
+    const dist = ranked.filter(m=>m.senal==='DISTRIBUCIÓN');
+    if (acum.length) s += '⚡ Acumulación: ' + acum.map(m=>m.sym+' ('+fmtPct(m.chg)+', RVOL '+m.rvol.toFixed(1)+quadShort(m.sym)+')').join(' · ') + '\n';
+    if (dist.length) s += '🔻 Distribución: ' + dist.map(m=>m.sym+' ('+fmtPct(m.chg)+', RVOL '+m.rvol.toFixed(1)+quadShort(m.sym)+')').join(' · ') + '\n';
+    return s;
+  };
+
+  // Cruces RRG × volumen para el resumen (todo el universo)
+  const buildCruces = () => {
+    if (!rrgLoaded) return '';
+    const todos = Object.keys(METRICS).filter(t => t !== 'SPY').map(t => METRICS[t]);
+    const lidDist = todos.filter(m => m.senal === 'DISTRIBUCIÓN' && QUAD[m.sym] && QUAD[m.sym].rank === 4);
+    const rotAcum = todos.filter(m => m.senal === 'ACUMULACIÓN' && QUAD[m.sym] && (QUAD[m.sym].rank === 3 || QUAD[m.sym].rank === 1));
+    if (!lidDist.length && !rotAcum.length) return '';
+    let s = '═══════════════════\n🔀 *Cruce RRG × Volumen*\n';
+    lidDist.forEach(m => {
+      s += '⚠️ '+m.sym+': Liderando en RRG pero cayó '+fmtPct(m.chg)+' con RVOL '+m.rvol.toFixed(1)+' → posible líder en deterioro\n';
+    });
+    rotAcum.forEach(m => {
+      s += '⭐ '+m.sym+': '+quadShort(m.sym).slice(2)+' en RRG y subió '+fmtPct(m.chg)+' con RVOL '+m.rvol.toFixed(1)+' → rotación con volumen\n';
+    });
+    return s;
+  };
+
+  let txt = '📊 *VOLUMEN & FLUJOS* — ' + fechaFmt + '\n';
+  txt += '═══════════════════\n';
+  txt += buildSection(GRUPOS_ETF, 'ETFs');
+  txt += '═══════════════════\n';
+  txt += buildSection(GRUPOS_STK, 'ACCIONES');
+  txt += buildCruces();
+
+  const flows = loadFlows();
+  if (flows.length) {
+    const last = flows[flows.length-1];
+    const [fy,fm,fd] = last.date.split('-');
+    txt += '═══════════════════\n';
+    txt += '💧 *Flujos ETF (Farside, MUSD)*\n';
+    txt += 'IBIT ' + (last.ibit>0?'+':'') + Number(last.ibit).toFixed(0) +
+           ' · ETHA ' + (last.etha>0?'+':'') + Number(last.etha).toFixed(0) + ' ('+fd+'/'+fm+')\n';
+    txt += 'Acum 5R: IBIT ' + (flowSum5(flows,'ibit')>0?'+':'') + flowSum5(flows,'ibit').toFixed(0) +
+           ' · ETHA ' + (flowSum5(flows,'etha')>0?'+':'') + flowSum5(flows,'etha').toFixed(0) + '\n';
+  }
+  txt += '═══════════════════\n';
+  txt += '⚠️ Análisis técnico, NO recomendación de inversión.';
+
+  navigator.clipboard.writeText(txt)
+    .then(() => toast('Resumen copiado — listo para WhatsApp'))
+    .catch(() => {
+      // Fallback para file:// donde clipboard API puede fallar
+      const ta = document.createElement('textarea');
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+      toast('Resumen copiado — listo para WhatsApp');
+    });
+});
+
+function renderError(noUrl) {
+  $('content').innerHTML = '<div class="error-box">' +
+    (noUrl ? 'Todavía no configuraste la URL de datos.' : 'No se pudieron cargar los datos.') +
+    '<div class="hint">' +
+    (noUrl
+      ? 'Editá el archivo HTML y pegá la URL de tu Web App de Apps Script en la constante <b>DATA_URL</b> (línea marcada arriba del script).<br>Mientras tanto podés usar el botón <b>PEGAR DATOS</b> con el contenido de volumen_data.json.'
+      : 'Verificá que la Web App esté implementada con acceso "Cualquier usuario", o usá el botón <b>PEGAR DATOS</b> como respaldo.') +
+    '</div></div>';
+  $('subtitle').textContent = 'sin datos';
+}
+
+/* ── Init ────────────────────────────────────────────────────────────── */
+fetchData(false);
+</script>
+</body>
+</html>
