@@ -66,6 +66,8 @@
   button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
   button.primary { background: var(--green); color: #05231a; border-color: var(--green); font-weight: 600; }
   button.primary:hover { background: #4defbb; }
+  button.danger-ghost { color: var(--text-dim); border-color: var(--border); }
+  button.danger-ghost:hover { color: var(--red); border-color: var(--red); background: var(--red-dim); }
   button:disabled { opacity: .5; cursor: wait; }
 
   /* ── Tabs ───────────────────────────────────────────── */
@@ -424,8 +426,8 @@
       Debilitando, Rezagado) y cruzarlo con el volumen. Si la dejás vacía,
       el dashboard funciona igual pero sin la columna de cuadrante.
    ═══════════════════════════════════════════════════════════════════════ */
-const DATA_URL = 'https://script.google.com/macros/s/AKfycbx-g2m5TeaGu57CuItAzLCOjBaLe0b8nWppGaaRZXd0A1-_GRpxug3yMyG7lnTUinHtmw/exec';
-const RRG_URL  = 'https://script.google.com/macros/s/AKfycbzYEixkMV5E4Zm7RUcqOejndboyFOamG-M4cHp-jQL3Fdd7_PlSEW77X1Wn0rRLFIciiA/exec';
+const DATA_URL = '';
+const RRG_URL  = '';
 
 /* ── Parámetros RRG (idénticos a los default de tu dashboard RRG) ────── */
 const RRG_SMOOTHING = 10; // SMA del RS, en semanas
@@ -801,6 +803,10 @@ function renderFlows() {
   html += '<div class="field"><label>IBIT (MUSD)</label><input type="number" step="0.1" id="flowIbit" placeholder="+120.5" value="'+(last ? last.ibit : '')+'"></div>';
   html += '<div class="field"><label>ETHA (MUSD)</label><input type="number" step="0.1" id="flowEtha" placeholder="-35.0" value="'+(last ? last.etha : '')+'"></div>';
   html += '<button id="btnFlowSave" class="primary">Guardar</button>';
+  if (flows.length) {
+    html += '<button id="btnFlowUndo" class="danger-ghost" title="Borra solo el último día cargado ('+last.date+') — útil para corregir un error de tipeo">↶ Borrar último</button>';
+    html += '<button id="btnFlowReset" class="danger-ghost" title="Borra TODOS los flujos cargados y deja los paneles en cero">🗑 Borrar todo</button>';
+  }
   html += '</div>';
 
   html += '<div class="flows-viz">';
@@ -982,6 +988,27 @@ function bindFlowEvents() {
     if (ibit === '' && etha === '') { toast('Cargá al menos un flujo'); return; }
     saveFlowEntry(date, ibit === '' ? 0 : Number(ibit), etha === '' ? 0 : Number(etha));
     toast('Flujo guardado · ' + date);
+    render();
+  });
+
+  const btnUndo = $('btnFlowUndo');
+  if (btnUndo) btnUndo.addEventListener('click', () => {
+    const flows = loadFlows();
+    if (!flows.length) return;
+    const ultimo = flows[flows.length - 1];
+    if (!confirm('¿Borrar el último día cargado (' + ultimo.date + ')?\n\nEl resto del historial se conserva.')) return;
+    flows.pop();
+    localStorage.setItem(LS_FLOWS, JSON.stringify(flows));
+    toast('Borrado el día ' + ultimo.date);
+    render();
+  });
+
+  const btnReset = $('btnFlowReset');
+  if (btnReset) btnReset.addEventListener('click', () => {
+    const flows = loadFlows();
+    if (!confirm('¿Borrar TODOS los flujos cargados (' + flows.length + ' días)?\n\nEsta acción no se puede deshacer. Los datos de mercado (precios y volumen) NO se tocan.')) return;
+    localStorage.removeItem(LS_FLOWS);
+    toast('Flujos borrados — paneles en cero');
     render();
   });
 }
