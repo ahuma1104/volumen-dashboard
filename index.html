@@ -426,8 +426,8 @@
       Debilitando, Rezagado) y cruzarlo con el volumen. Si la dejás vacía,
       el dashboard funciona igual pero sin la columna de cuadrante.
    ═══════════════════════════════════════════════════════════════════════ */
-const DATA_URL = 'https://script.google.com/macros/s/AKfycbx-g2m5TeaGu57CuItAzLCOjBaLe0b8nWppGaaRZXd0A1-_GRpxug3yMyG7lnTUinHtmw/exec';
-const RRG_URL  = 'https://script.google.com/macros/s/AKfycbzYEixkMV5E4Zm7RUcqOejndboyFOamG-M4cHp-jQL3Fdd7_PlSEW77X1Wn0rRLFIciiA/exec';
+const DATA_URL = '';
+const RRG_URL  = '';
 
 /* ── Parámetros RRG (idénticos a los default de tu dashboard RRG) ────── */
 const RRG_SMOOTHING = 10; // SMA del RS, en semanas
@@ -450,13 +450,15 @@ const GRUPOS_ETF = [
   { nombre: 'Otros',            tickers: ['ITA','EWZ','EWY','UFO'] },
 ];
 const GRUPOS_STK = [
-  { nombre: 'Megacaps',              tickers: ['NVDA','MSFT','AAPL','AMZN','META','TSLA'] },
+  { nombre: 'Megacaps',              tickers: ['NVDA','MSFT','AAPL','AMZN','META','TSLA','UBER'] },
   { nombre: 'Semis / Hardware',      tickers: ['MU','ASML'] },
-  { nombre: 'Software / AI',         tickers: ['NOW','PLTR','IBM','CRWV'] },
+  { nombre: 'Software / AI · IT',    tickers: ['NOW','PLTR','IBM','CRWV','ADBE','ACN','NBIS'] },
   { nombre: 'Cripto-correlacionadas',tickers: ['MSTR','IREN'] },
-  { nombre: 'Latam',                 tickers: ['MELI','NU'] },
+  { nombre: 'Latam',                 tickers: ['MELI','NU','XP','BBD','MOS'] },
   { nombre: 'Salud',                 tickers: ['LLY','MDT','HIMS'] },
+  { nombre: 'Oro / Minería',         tickers: ['NEM'] },
   { nombre: 'Otros',                 tickers: ['CAT','OKLO','ASTS'] },
+  { nombre: 'Europa',                tickers: ['SAN','SAP'] },
   { nombre: 'Cripto spot · 24/7',    tickers: ['BTC-USD'] },
 ];
 const CRYPTO_SPOT = new Set(['BTC-USD']); // volumen de Yahoo ya viene en USD
